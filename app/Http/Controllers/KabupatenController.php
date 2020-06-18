@@ -53,7 +53,7 @@ class KabupatenController extends Controller
             ->join('tb_kelurahan','tb_laporan.id_kelurahan','=','tb_kelurahan.id')
             ->join('tb_kecamatan','tb_kelurahan.id_kecamatan','=','tb_kecamatan.id')
             ->join('tb_kabupaten','tb_kecamatan.id_kabupaten','=','tb_kabupaten.id')
-            ->where('tanggal',$this->dateNow)
+            ->where('tanggal',$tanggal)
             ->groupBy('kabupaten')
             ->orderBy('total','DESC')
             ->get();
@@ -62,10 +62,10 @@ class KabupatenController extends Controller
         }else{
             $data = $cekData;
         }
-        $totalMeninggal = Data::select(DB::raw('COALESCE(SUM(meninggal),0) as meninggal'))->where('tanggal',$this->dateNow)->get();
-        $totalPositif = Data::select(DB::raw('COALESCE(SUM(total),0) as total'))->where('tanggal',$this->dateNow)->get();
-        $totalDirawat = Data::select(DB::raw('COALESCE(SUM(perawatan),0) as perawatan'))->where('tanggal',$this->dateNow)->get();
-        $totalSembuh = Data::select(DB::raw('COALESCE(SUM(sembuh),0) as sembuh'))->where('tanggal',$this->dateNow)->get();
+        $totalMeninggal = Data::select(DB::raw('COALESCE(SUM(meninggal),0) as meninggal'))->where('tanggal',$tanggal)->get();
+        $totalPositif = Data::select(DB::raw('COALESCE(SUM(total),0) as total'))->where('tanggal',$tanggal)->get();
+        $totalDirawat = Data::select(DB::raw('COALESCE(SUM(perawatan),0) as perawatan'))->where('tanggal',$tanggal)->get();
+        $totalSembuh = Data::select(DB::raw('COALESCE(SUM(sembuh),0) as sembuh'))->where('tanggal',$tanggal)->get();
 
         return view('index.index',compact("data","totalMeninggal","totalPositif","totalDirawat","totalSembuh","tanggalSekarang"));
     }
