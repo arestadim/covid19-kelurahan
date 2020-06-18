@@ -39,7 +39,7 @@ class PasienController extends Controller
         })->get();
 
 
-        return view('pasien.index', compact("kabupaten","kelurahanBelumUpdate","tanggalSekarang"));
+        return view('Pasien.index', compact("kabupaten","kelurahanBelumUpdate","tanggalSekarang"));
     }
 
     public function getKecamatan(Request $request){
