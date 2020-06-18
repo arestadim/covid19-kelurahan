@@ -52,7 +52,7 @@
         	<div class="box2">
             <h4>Filter Data</h4>
 
-                <form action="/search" method="post" id="form">
+                <form action="/search" method="POST" id="form">
                     @csrf
                   <div class="form-group">
                     <label for="from" >Tanggal Penyebaran :</label>
