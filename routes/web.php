@@ -15,7 +15,8 @@ Route::get('/','KabupatenController@index');
 
 Route::resource('pasien','PasienController');
 Route::resource('kabupaten','KabupatenController');
-
+Route::get('/getKecamatan','PasienController@getKecamatan');
+Route::get('/getKelurahan','PasienController@getKelurahan');
 Route::get('/create-pallete','KabupatenController@createPallette');
 Route::get('/getData','KabupatenController@getData');
 Route::get('/getPositif','KabupatenController@getPositif');

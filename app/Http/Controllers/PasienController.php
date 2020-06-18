@@ -4,13 +4,24 @@ namespace App\Http\Controllers;
 
 use DB;
 use App\Pasien;
+use App\Data;
+use App\Kecamatan;
+use App\Kelurahan;
 use App\Kabupaten;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 
 class PasienController extends Controller
 {
+    private $dateTimeNow;
+    private $dateNow;
+    private $dateFormatName;
+    public function __construct(){
 
+        $this->dateTimeNow = Carbon::now()->addHours(8);
+        $this->dateNow = Carbon::now()->format('Y-m-d');
+        $this->dateFormatName = Carbon::now()->locale('id')->isoFormat('LL');
+    }
 
     /**
      * Display a listing of the resource.
@@ -19,25 +30,24 @@ class PasienController extends Controller
      */
     public function index()
     {
-        $pasien = Pasien::select('tb_pasien.id','id_kabupaten','kabupaten','positif','rawat','sembuh','meninggal')
-                ->join('tb_kabupaten','tb_pasien.id_kabupaten','=','tb_kabupaten.id')
-                ->get();
-        $test = Pasien::select('tb_pasien.id','id_kabupaten','kabupaten','positif','rawat','sembuh','meninggal')
-                ->join('tb_kabupaten','tb_pasien.id_kabupaten','=','tb_kabupaten.id')
-                ->where('tgl_data', Pasien::max('tgl_data'))->orderBy('tgl_data','desc')
-                ->get();
-        $sembuh = Pasien::where('tgl_data', Pasien::max('tgl_data'))->orderBy('tgl_data','desc')
-                ->sum('sembuh');
-        $positif = Pasien::where('tgl_data', Pasien::max('tgl_data'))->orderBy('tgl_data','desc')
-                ->sum('positif');
-        $meninggal = Pasien::where('tgl_data', Pasien::max('tgl_data'))->orderBy('tgl_data','desc')
-                ->sum('meninggal');
-        $rawat = Pasien::where('tgl_data', Pasien::max('tgl_data'))->orderBy('tgl_data','desc')
-                ->sum('rawat');
-        $kabupaten = Kabupaten::all();
+        $tanggalSekarang = $this->dateFormatName;
+        $kabupaten = Kabupaten::get();
+        $data1 = Data::select('updated_at')->get();
 
-        $date   = \Carbon\Carbon::now()->format('d F Y');
-        return view('pasien.index',compact('kabupaten','positif','rawat','sembuh','meninggal','date'));
+        $kelurahanBelumUpdate = Kelurahan::whereDoesntHave('data', function($query){
+            $query->where('tanggal','=',$this->dateNow)->where('status','=',1);
+        })->get();
+
+
+        return view('pasien.index', compact("kabupaten","kelurahanBelumUpdate","tanggalSekarang"));
+    }
+
+    public function getKecamatan(Request $request){
+        return Kecamatan::where('id_kabupaten',$request->id_kabupaten)->get();
+    }
+
+    public function getKelurahan(Request $request){
+        return Kelurahan::where('id_kecamatan',$request->id_kecamatan)->get();
     }
 
     /**
@@ -58,28 +68,31 @@ class PasienController extends Controller
      */
     public function store(Request $request)
     {
-
-        $cek = Pasien::where('id_kabupaten',$request->kabupaten)->where('tgl_data',$request->tgl_data)->count();
+        $cek = Data::where('id_kelurahan',$request->kelurahan)->where('tanggal',$request->tanggal)->count();
         if($cek == 0){
-            $Pasien = new Pasien();
+            $data = new Data();
         }else{
-            $Pasien = Pasien::where('id_kabupaten',$request->kabupaten)->where('tgl_data',$request->tgl_data)->first();
-            $Pasien->status = 1;
+            $data = Data::where('id_kelurahan',$request->kelurahan)->where('tanggal',$request->tanggal)->first();
+            $data->status = 1;
         }
 
-        $Pasien->id_kabupaten = $request->kabupaten;
-        $Pasien->meninggal = $request->meninggal;
-        $Pasien->sembuh = $request->sembuh;
-        $Pasien->rawat = $request->rawat;
-        $Pasien->tgl_data = $request->tgl_data;
-        $Pasien->positif = $request->sembuh + $request->rawat + $request->meninggal;
-        if($cek == 0){
-            $Pasien->save();
-        }else{
-            $Pasien->update();
-        }
+        $data->id_kelurahan = $request->kelurahan;
+        $data->ppln = $request->ppln;
+        $data->ppdn = $request->ppdn;
+        $data->tl = $request->tl;
+        $data->lainnya = $request->lainnya;
 
-        return redirect('/pasien');
+        $data->sembuh = $request->sembuh;
+        $data->meninggal = $request->meninggal;
+        $data->perawatan = $request->perawatan;
+        $data->tanggal = $request->tanggal;
+        $data->total = $request->sembuh + $request->perawatan + $request->meninggal;
+        if($cek == 0){
+            $data->save();
+        }else{
+            $data->update();
+        }
+        return redirect('/pasien')->with('alert','Data Berhasil di Update!');
         return $request;
 
     }

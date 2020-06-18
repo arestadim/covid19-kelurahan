@@ -5,10 +5,22 @@ namespace App\Http\Controllers;
 use App\Kabupaten;
 use Illuminate\Http\Request;
 use DB;
+use App\Data;
 use App\Pasien;
 use Illuminate\Support\Carbon;
 class KabupatenController extends Controller
 {
+    private $dateTimeNow;
+    private $dateNow;
+    private $dateFormatName;
+    private $dateFormatName1;
+
+    public function __construct()
+    {
+        $this->dateTimeNow = Carbon::now()->addHours(8);
+        $this->dateNow = Carbon::now()->format('Y-m-d');
+        $this->dateFormatName = Carbon::now()->locale('id')->isoFormat('LL');
+    }
     /**
      * Display a listing of the resource.
      *
@@ -16,20 +28,22 @@ class KabupatenController extends Controller
      */
     public function index()
     {
-        $tanggalSekarang = CARBON::now()->locale('id')->isoFormat('LL');
-        $dateNow = Carbon::now()->format('Y-m-d');
-        $data = Pasien::select('tb_pasien.id','id_kabupaten','kabupaten','sembuh','rawat','positif','meninggal')
-                ->join('tb_kabupaten','tb_pasien.id_kabupaten','=','tb_kabupaten.id')
-                ->where('tgl_data', $dateNow)->orderBy('positif','desc')
-                ->get();
-                $meninggal = Pasien::select(DB::raw('COALESCE(SUM(meninggal),0) as meninggal'))->where('tgl_data',$dateNow)->get();
-                $positif = Pasien::select(DB::raw('COALESCE(SUM(positif),0) as positif'))->where('tgl_data',$dateNow)->get();
-                $rawat = Pasien::select(DB::raw('COALESCE(SUM(rawat),0) as rawat'))->where('tgl_data',$dateNow)->get();
-                $sembuh = Pasien::select(DB::raw('COALESCE(SUM(sembuh),0) as sembuh'))->where('tgl_data',$dateNow)->get();
-        $kabupaten = Kabupaten::all();
-        $labels = Kabupaten::select('kabupaten')->get();
+        $data = Data::select('kabupaten',DB::raw('COALESCE(SUM(meninggal),0) as meninggal'),DB::raw('COALESCE(SUM(total),0) as total'),DB::raw('COALESCE(SUM(perawatan),0) as perawatan'),DB::raw('COALESCE(SUM(sembuh),0) as sembuh'),'tanggal')
+            ->join('tb_kelurahan','tb_laporan.id_kelurahan','=','tb_kelurahan.id')
+            ->join('tb_kecamatan','tb_kelurahan.id_kecamatan','=','tb_kecamatan.id')
+            ->join('tb_kabupaten','tb_kecamatan.id_kabupaten','=','tb_kabupaten.id')
+            ->where('tanggal',$this->dateNow)
+            ->groupBy('kabupaten')
+            ->orderBy('total','DESC')
+            ->get();
+            // return $data;
+        $tanggalSekarang = $this->dateFormatName;
+        $totalMeninggal = Data::select(DB::raw('COALESCE(SUM(meninggal),0) as meninggal'))->where('tanggal',$this->dateNow)->get();
+        $totalPositif = Data::select(DB::raw('COALESCE(SUM(total),0) as total'))->where('tanggal',$this->dateNow)->get();
+        $totalDirawat = Data::select(DB::raw('COALESCE(SUM(perawatan),0) as perawatan'))->where('tanggal',$this->dateNow)->get();
+        $totalSembuh = Data::select(DB::raw('COALESCE(SUM(sembuh),0) as sembuh'))->where('tanggal',$this->dateNow)->get();
 
-        return view('index.index',compact('kabupaten','data','sembuh','positif','rawat','meninggal','tanggalSekarang'));
+        return view('index.index',compact("data","totalMeninggal","totalPositif","totalDirawat","totalSembuh","tanggalSekarang"));
     }
 
     public function search(Request $request){
@@ -57,18 +71,32 @@ class KabupatenController extends Controller
     public function getData(Request $request)
     {
         $dateNow = Carbon::now()->format('Y-m-d');
+        // if (is_null($request->date)) {
+        //     $tanggal = $dateNow;
+        // }else{
+        //     $tanggal = $request->date;
+        // }
+
+        // $data = Pasien::select('tb_pasien.id','id_kabupaten','kabupaten','sembuh','rawat','positif','meninggal')
+        //         ->rightjoin('tb_kabupaten','tb_pasien.id_kabupaten','=','tb_kabupaten.id')
+        //         ->where('tgl_data',$tanggal)
+        //         ->orderBy('id_kabupaten','ASC')
+        //         ->get();
+        // return $data;
+
         if (is_null($request->date)) {
             $tanggal = $dateNow;
         }else{
             $tanggal = $request->date;
         }
 
-        $data = Pasien::select('tb_pasien.id','id_kabupaten','kabupaten','sembuh','rawat','positif','meninggal')
-                ->rightjoin('tb_kabupaten','tb_pasien.id_kabupaten','=','tb_kabupaten.id')
-                ->where('tgl_data',$tanggal)
-                ->orderBy('id_kabupaten','ASC')
-                ->get();
-        return $data;
+        $dataMap = Data::Select("*","kelurahan","kecamatan")
+            ->rightJoin('tb_kelurahan','tb_laporan.id_kelurahan','=','tb_kelurahan.id')
+            ->rightJoin('tb_kecamatan','tb_kelurahan.id_kecamatan','=','tb_kecamatan.id')
+            ->where('tanggal',$tanggal)
+            ->get();
+
+        return response()->json(["dataMap"=>$dataMap]);
     }
 
     public function getPositif(Request $request)
